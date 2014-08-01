@@ -1,0 +1,46 @@
+{
+    "Profile":{
+	"applicationVisibilities": { "ID": ["application"] },
+	"classAccesses":           { "ID": ["apexClass"] },
+	"fieldPermissions":        { "ID": ["field"] },
+	"layoutAssignments":       { "ID": ["layout","recordType"] },
+	"objectPermissions":       { "ID": ["object"] },
+	"pageAccesses":            { "ID": ["apexPage"] },
+	"recordTypeVisibilities":  { "ID": ["recordType"] },
+	"tabVisibilities":         { "ID": ["tab"] },
+	"userPermissions":         { "ID": ["name"] },
+	"loginIpRanges":           { "ID": ["endAddress"]}
+    },
+    "PermissionSet":{
+	"applicationVisibilities": { "ID": ["application"] },
+	"classAccesses":           { "ID": ["apexClass"] },
+	"fieldPermissions":        { "ID": ["field"] },
+	"layoutAssignments":       { "ID": ["layout","recordType"] },
+	"objectPermissions":       { "ID": ["object"] },
+	"pageAccesses":            { "ID": ["apexPage"] },
+	"recordTypeVisibilities":  { "ID": ["recordType"] },
+	"tabSettings":             { "ID": ["tab"] },
+	"tabVisibilities":         { "ID": ["tab"] },
+	"userPermissions":         { "ID": ["name"] },
+	"loginIpRanges":           { "ID": ["endAddress"]}
+    },
+    "Layout":{
+	"layoutSections": {"ID":["label"]},
+	"layoutItems": {"ID":["field","page"]},
+	"relatedLists": {"ID":["relatedList"]}
+    },
+    "CustomObject":{
+	"actionOverrides": {"ID": ["actionName"]},
+	"fieldSets":       {
+	    "ID": ["fullName"],
+	    "displayedFields":{ "ID":["field"]}
+	},
+	"fields": {
+	    "ID":["fullName"],
+	    "picklist":{
+		"picklistValues":{ "ID":["fullName"]}
+	    }
+	},
+	"listViews": {"ID":["fullName"]}
+    }
+}

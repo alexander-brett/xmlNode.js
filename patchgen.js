@@ -1,19 +1,25 @@
-function repeat(x,n){var s = '';for(;;){if(n&1)s+=x;n>>=1;if(n)x+=x;else break}return s}
+//repeats a string n times, fast
+function repeat(x,n){var s='';for(;;){if(n&1)s+=x;n>>=1;if(n)x+=x;else break}return s}
 
 xmlNode = function (xmlString, identifiers, depth, parentID) {
-    var self         = this;
-    if(xmlString.indexOf("\n") == 0) self.outerXML = repeat("    ",depth) + xmlString;
-    else self.outerXML = "\n" + repeat("    ",depth) + xmlString;
-    self.identifiers = {};
-    self.children    = {};
-    self.depth       = depth || 0;
-    self.declaration = "";
-    self.tagName     = "";
-    self.innerXML    = "";
-    self.properties  = "";
-    self.UID         = "";
-    self.indent      = "";
-    self.length      = function () { return Object.keys(self.children).length };
+
+    /*
+     * an object representing a node in an xml object. Has children indexed by their IDs,
+     * as defined by the identifiers object argument
+     */
+
+    this.outerXML    = (xmlString.indexOf("\n") == 0 ? "" : "\n") + repeat(" ",4*depth) + xmlString;
+    this.identifiers = {};
+    this.children    = {};
+    this.childKeys   = [];
+    this.depth       = depth || 0;
+    this.declaration = "";
+    this.tagName     = "";
+    this.innerXML    = "";
+    this.properties  = "";
+    this.UID         = "";
+    this.indent      = "";
+    this.length      = function () { return Object.keys(this.children).length };
 
     var __construct = function (self) {
 
@@ -33,16 +39,24 @@ xmlNode = function (xmlString, identifiers, depth, parentID) {
 	    self.tagName     = x[1];
 	    self.properties  = x[2];
 	}
-
-	for each(match in self.innerXML.match(/<(\w+)[^>]*>[\s\S]*?<\/\1>|<\w+\/>/g)) {
-	    child = new xmlNode(match, self.identifiers,self.depth + 1);
-	    self.children[child.UID] = child;
+	
+	var matches = self.innerXML.match(/<(\w+)[^>]*>[\s\S]*?<\/\1>|<\w+\/>/g);
+	if(matches){
+	    for (var i = 0; i < matches.length; i++) {
+		var child = new xmlNode(matches[i], self.identifiers,self.depth + 1);
+		self.children[child.UID] = child;
+	    }
+	    self.childKeys = Object.keys(self.children).sort();
 	}
 
 	if(Object.keys(self.identifiers).indexOf("ID") > -1){
 	    self.UID = self.tagName;
-	    for each(UID in Object.keys(self.children)){
-		if (self.identifiers.ID.indexOf(UID.slice(0,UID.indexOf("."))) > -1) self.UID += "." + UID;
+	    for (var i in self.identifiers.ID) {
+		for (var j in self.childKeys){
+		    if (self.childKeys[j].indexOf(self.identifiers.ID[i]) > -1){
+			self.UID += "." + self.childKeys[j];
+		    }
+		}
 	    }
 	} else if (self.length() == 0){
 	    self.UID = self.tagName + "." + self.innerXML;
@@ -51,14 +65,14 @@ xmlNode = function (xmlString, identifiers, depth, parentID) {
 
 };
 
-xmlDiff = function (oldNode, newNode, filter) {
+xmlDiff = function (oldNode, newNode) {
     var self      = this;
-    self.UID      = (oldNode || newNode).UID;
-    self.tagName  = (oldNode || newNode).tagName;
-    self.old      = oldNode;
-    self.new      = newNode;
-    self.status   = 0;
-    self.children = {};
+    this.UID      = (oldNode || newNode).UID;
+    this.tagName  = (oldNode || newNode).tagName;
+    this.old      = oldNode;
+    this.new      = newNode;
+    this.status   = 0;
+    this.children = {};
     var status = { 
 	"ignore": 0,
 	"unchanged": 1,
@@ -79,123 +93,94 @@ xmlDiff = function (oldNode, newNode, filter) {
 		   && oldNode.declaration == newNode.declaration
 		   && oldNode.length() > 0) {
 	    self.status = status.childrenModified;
-	    var keys = Object.keys(oldNode.children)
-		.concat(Object.keys(newNode.children))
-		.sort()
-		.filter(function(e, i, array) {
+	    var keys = oldNode.childKeys.concat(newNode.childKeys).filter(function(e, i, array) {
 		    return array.indexOf(e) == i;
-		})
-		.sort();
-	    for each(k in keys){
+		});
+	    for (var i in keys){
+		var k = keys[i];
+		var oldChild = oldNode.childKeys.indexOf(k)<0 ? false : oldNode.children[k];
+		var newChild = newNode.childKeys.indexOf(k)<0 ? false : newNode.children[k];
 
-		var oldChild, newChild;
-		if ( Object.keys(oldNode.children).indexOf(k)<0 ) oldChild = false;
-		else oldChild = oldNode.children[k];
-
-		if ( Object.keys(newNode.children).indexOf(k)<0 ) newChild = false;
-		else newChild = newNode.children[k];
-
-		self.children[k] = new xmlDiff(oldChild,newChild);
+		self.children[k] = new xmlDiff(oldChild, newChild);
 	    }
 	} else {
 	    self.status = status.modified;
 	}
     }(this);
 
+    this.filter = function(terms){
+	var matches = false;
+	for (var i in terms) { if (self.UID.indexOf(terms[i]) != -1) matches = true };
+	if (self.status != status.unchanged 
+	    && self.status != status.childrenModified
+	    && !matches) {
+	    if (self.status == status.added) self.status = status.ignore;
+	    else {self.status = status.unchanged}
+	} else if (self.status == status.childrenModified
+		   && !matches) {
+	    for (var i in self.children) { self.children[i].filter(terms); }
+	}
+    }
 
-    self.toString = function(){
+    this.toString = function(){
 	if (self.status == status.unchanged) {
 	    return self.old.outerXML.toString().replaceAll("\n","\n ");
 	} else if (self.status == status.added) {
-	    return self.new.outerXML.toString().toString().replaceAll("\n","\n+");
+	    return self.new.outerXML.toString().replaceAll("\n","\n+");
 	} else if (self.status == status.deleted) {
 	    return self.old.outerXML.toString().replaceAll("\n","\n-");
 	} else if (self.status == status.modified) {
 	    return self.old.outerXML.toString().replaceAll("\n","\n-") 
 		+ self.new.outerXML.toString().replaceAll("\n","\n+");
 	} else if (self.status == status.childrenModified) {
-	    var output = "";
-	    if(self.old.declaration) output += "\n " + self.old.declaration;
+    
+	    var allKeys = Object.keys(self.children).sort(function(a,b){
+		if (
+		    (aIP = a.match(/\.(\d+)\.(\d+)\.(\d+)\.(\d+)$/)) 
+			&& (bIP = b.match(/\.(\d+)\.(\d+)\.(\d+)\.(\d+)$/))
+		) {
+		    return (aIP[1]*0x1000000 + aIP[2]*0x10000 + aIP[3]*0x100 + aIP[4]*1) 
+			- (bIP[1]*0x1000000 + bIP[2]*0x10000 + bIP[3]*0x100 + bIP[4]*1);
+		} else {
+		    return a.replaceAll(" ","") > b.replaceAll(" ","") ? 1 : -1;
+		}
+	    });
+
+	    var output = self.old.declaration ? "\n " + self.old.declaration : "" ;
 	    output += "\n " + repeat("    ",self.old.depth) + "<" + self.tagName;
-	    if(self.old.properties)output += self.old.properties;
+	    if (self.old.properties) output += self.old.properties;
 	    output += ">";
-	    for each (k in Object.keys(self.children).sort() ) {
-		output += self.children[k].toString();
-	    }
+	    for (var i in allKeys) { output += self.children[allKeys[i]].toString(); }
 	    output += "\n "  + repeat("    ",self.old.depth) + "</" + self.tagName + ">";
+
 	    return output;
-	} else {return "";}
-    }
 
-    self.filter = function(term){
-	if (self.status != status.unchanged 
-	    && self.status != status.childrenModified
-	    && self.UID.indexOf(term) == -1) {
-	    if (self.status == status.added) self.status = status.ignore;
-	    else {self.status = status.unchanged}
-	}
-
-	if (self.status == status.childrenModified) {
-	    var unchanged = true;
-	    for each (child in self.children) {
-		child.filter(term);
-		if (child.status != status.unchanged) unchanged = false; 
-	    }
-	    if (unchanged) { self.status = status.unchanged; }
-	}
+	} else { return ""; }
     }
 }
 
-
-
-identification = {
-    "Profile":{
-	"applicationVisibilities": { "ID": ["application"] },
-	"classAccesses":           { "ID": ["apexClass"] },
-	"fieldPermissions":        { "ID": ["field"] },
-	"layoutAssignments":       { "ID": ["layout","recordType"] },
-	"objectPermissions":       { "ID": ["object"] },
-	"pageAccesses":            { "ID": ["apexPage"] },
-	"recordTypeVisibilities":  { "ID": ["recordType"] },
-	"tabVisibilities":         { "ID": ["tab"] },
-	"userPermissions":         { "ID": ["name"] }
-    },
-    "PermissionSet":{
-	"applicationVisibilities": { "ID": ["application"] },
-	"classAccesses":           { "ID": ["apexClass"] },
-	"fieldPermissions":        { "ID": ["field"] },
-	"layoutAssignments":       { "ID": ["layout","recordType"] },
-	"objectPermissions":       { "ID": ["object"] },
-	"pageAccesses":            { "ID": ["apexPage"] },
-	"recordTypeVisibilities":  { "ID": ["recordType"] },
-	"tabVisibilities":         { "ID": ["tab"] },
-	"userPermissions":         { "ID": ["name"] }
-    },
-    "CustomObject":{
-	"actionOverrides": {"ID": ["actionName"]},
-	"fieldSets":       {
-	    "ID": ["fullName"],
-	    "displayedFields":{ "ID":["field"]}
-	},
-	"fields": {
-	    "ID":["fullName"],
-	    "picklist":{
-		"picklistValues":{ "ID":["fullName"]}
-	    }
-	},
-	"listViews": {"ID":["fullName"]}
-    }
-}
-
-//f = "src/profiles/Admin.profile";
-for each(f in `git diff --name-only --relative --ignore-space-change src/profiles/`.trim().split("\n")) {
-	 //["src/profiles/Finance-Credit Controller.profile"]){//, "src/profiles/Admin.profile"]){
+idData = JSON.parse(readFully("deployments/xmlmappings.json"));
+Files = (`git diff --name-only --relative src/profiles/` 
+	 + `git diff --name-only --relative src/permissionsets/`).split("\n");
+l = Files.length;
+for (var i in Files){
+    var f = Files[i];
+    if(!f) continue;
     oldContent = $EXEC('git show HEAD:"Salesforce/'+f+'"');
-    newContent = $EXEC('cat "' + f + '"');
-    oldData = new xmlNode(oldContent, identification);
-    newData = new xmlNode(newContent, identification);
-    diff = new xmlDiff(oldData, newData, "ActionPlanCreationController");
-    diff.filter("ActionPlanCreationController");
-    print("diff -u a/Salesforce/"+f+" b/Salesforce/"+f+"\n--- a/Salesforce/"+f+"\n+++ b/Salesforce/"+f+"\n@@ -1,0 +1,0 @@" + diff.toString());
-    //print(Object.keys(diff.children).join("\n"));
+    newContent = readFully(f);
+
+    oldData = new xmlNode(oldContent, idData);
+    newData = new xmlNode(newContent, idData);
+
+    diff = new xmlDiff(oldData, newData);
+    diff.filter(arguments[0].split(','));
+
+    if( (output = diff.toString()).trim() ) {
+	print("diff -u a/Salesforce/" + f + " b/Salesforce/" + f
+	      + "\n--- a/Salesforce/" + f
+	      + "\n+++ b/Salesforce/" + f 
+	      + "\n@@ -1,0 +1,0 @@" + output);
+    }
+
+    java.lang.System.err.print("\r" + i + " / " + l + "...");
 }
