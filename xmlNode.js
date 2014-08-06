@@ -1,5 +1,6 @@
 xmlNode = function (xmlString, identifiers, depth, parentID) {
   if(this === window){ return new xmlNode(xmlString, identifiers, depth, parentID)}
+  function repeat(x,n){var s='';for (;;) {if(n&1)s+=x;n>>=1;if(n) x+=x;else break}return s;}
 
   /*
    * an object representing a node in an xml object. Has children indexed by their IDs,
@@ -8,7 +9,7 @@ xmlNode = function (xmlString, identifiers, depth, parentID) {
    
   var node = this;
 
-  this.outerXML    = (xmlString.indexOf("\n") == 0 ? "" : "\n") + repeat(" ",4*depth) + xmlString;
+  this.outerXML    = "" + (xmlString.indexOf("\n") == 0 ? "" : "\n") + repeat(" ",4*depth) + xmlString;
   this.identifiers = {};
   this.children    = {};
   this.childKeys   = [];
@@ -32,7 +33,7 @@ xmlNode = function (xmlString, identifiers, depth, parentID) {
       self.tagName     = x[1];
       self.properties  = x[2];
       self.innerXML    = x[3];
-      if(Object.keys(identifiers).indexOf(self.tagName) > -1){
+      if(identifiers && Object.keys(identifiers).indexOf(self.tagName) > -1){
         self.identifiers = identifiers[self.tagName];
       }
     } else if ( x = self.outerXML.match(/<(\w+)([^>]*)\/>/)) {
@@ -63,8 +64,8 @@ xmlNode = function (xmlString, identifiers, depth, parentID) {
     }
   }(this);
 
-  diff = function (newNode) {
-    if(node === this) return new self.diff(newNode);
+  this.diff = function (newNode) {
+    if(node === this) return new node.diff(newNode);
     
     var oldNode   = node;
     var self      = this;
@@ -102,7 +103,7 @@ xmlNode = function (xmlString, identifiers, depth, parentID) {
           var oldChild = oldNode.childKeys.indexOf(k)<0 ? false : oldNode.children[k];
           var newChild = newNode.childKeys.indexOf(k)<0 ? false : newNode.children[k];
           
-          self.children[k] = new xmlDiff(oldChild, newChild);
+          self.children[k] = oldChild.diff(newChild);
         }
       } else {
         self.status = status.modified;
@@ -125,18 +126,18 @@ xmlNode = function (xmlString, identifiers, depth, parentID) {
       }
     }
     
-    var toString = function(){
+    this.toString = function(){
       if (self.status == status.unchanged) {
-        return self.old.outerXML.toString().replaceAll("\n","\n ");
+        return self.old.outerXML.replace(/\n/g,"\n ");
       } else if (self.status == status.added) {
-        return self.new.outerXML.toString().replaceAll("\n","\n+");
+        return self.new.outerXML.replace(/\n/g,"\n+");
       } else if (self.status == status.deleted) {
-        return self.old.outerXML.toString().replaceAll("\n","\n-");
+        return self.old.outerXML.replace(/\n/g,"\n-");
       } else if (self.status == status.modified) {
-        return self.old.outerXML.toString().replaceAll("\n","\n-") 
-          + self.new.outerXML.toString().replaceAll("\n","\n+");
+        return self.old.outerXML.replace(/\n/g,"\n-") 
+          + self.new.outerXML.replace(/\n/g,"\n+");
       } else if (self.status == status.childrenModified) {
-      
+        
         var allKeys = Object.keys(self.children).sort(function(a,b){
           if (
             //sort IP addresses sensibly
@@ -159,7 +160,7 @@ xmlNode = function (xmlString, identifiers, depth, parentID) {
         output += "\n "  + repeat("    ",self.old.depth) + "</" + self.tagName + ">";
         
         return output;
-      
+        
       } else { return ""; }
     }
   }
