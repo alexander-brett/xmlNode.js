@@ -5,7 +5,7 @@ xmlNode = function (xmlData, identifiers, depth) {
   
     
   function repeat(x,n){
-    //repeats a string, x, n times
+    //repeats a string x n times
     var s='';for (;;) {if(n&1)s+=x;n>>=1;if(n) x+=x;else break}return s;
   }
 
@@ -132,7 +132,7 @@ xmlNode = function (xmlData, identifiers, depth) {
       ) {
         self.status = status.childrenModified;
         var keys = oldNode.childKeys.concat(newNode.childKeys).filter(function(e, i, array) {
-        return array.indexOf(e) == i;
+          return array.indexOf(e) == i;
         });
         for (var i in keys){
           var k = keys[i];
@@ -209,11 +209,11 @@ xmlNode = function (xmlData, identifiers, depth) {
       } else if (self.status == status.childrenModified) {
         var allKeys = Object.keys(self.children).sort(sortFunction);
         var output = self.old.declaration ? "\n " + self.old.declaration : "" ;
-        output += "\n<" + self.tagName + self.old.properties + ">";
+        output += "\n <" + self.tagName + self.old.properties + ">";
         for (var i in allKeys) {
           output += self.children[allKeys[i]].toString();
         }
-        output += "\n</" + self.tagName + ">";
+        output += "\n </" + self.tagName + ">";
         
         return output;
         
