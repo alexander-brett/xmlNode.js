@@ -6,7 +6,5 @@ $(function(){
     thediff = oldData.diff(newData)
   
     $("#output").text(thediff.toString());
-    
-    console.log(thediff);
   })
 });

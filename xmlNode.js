@@ -1,6 +1,6 @@
-xmlNode = function (xmlString, identifiers, depth, parentID) {
+xmlNode = function (xmlData, identifiers, depth) {
   if(!(this instanceof xmlNode)){
-    return new xmlNode(xmlString, identifiers, depth, parentID)
+    return new xmlNode(xmlData, identifiers, depth)
   }
   
     
@@ -27,64 +27,76 @@ xmlNode = function (xmlString, identifiers, depth, parentID) {
   this.properties  = "";
   this.UID         = "";
   this.indent      = "";
+  this.content     = "";
+  
+  //the following regex
+  var xmlGlobalRegex = /(<\?[\s\S]*\?>\s*)?<(\w+)( [^>]*)?(?:\/>|>([\s\S]*)<\/\2>)/g;
   
   this.length = function() {
     //the length of a node will be defined by the number of children
     return Object.keys(this.children).length
   };
-
-  var __construct = function (self) {
-    if (xmlString) self.outerXML = (xmlString.indexOf("\n") == 0 ? "" : "\n") + repeat(" ",4*depth) + xmlString;
-    
-    if (x = self.outerXML.match(/<\?[\s\S]*\?>/)) self.declaration = x[0];
-    
-    //x = self.outerXML.match(/<(\w+)\/>/);
-    //NB this tool can't handle self-closing tags yet
-    
-    if (x = self.outerXML.match(/<(\w+)([^>]*)>([\s\S]*?)<\/\1>/)) {
-      self.tagName     = x[1];
-      self.properties  = x[2];
-      self.innerXML    = x[3];
-      if(identifiers && Object.keys(identifiers).indexOf(self.tagName) > -1){
-        self.identifiers = identifiers[self.tagName];
-      }
-    } else if ( x = self.outerXML.match(/<(\w+)([^>]*)\/>/)) {
-      self.tagName     = x[1];
-      self.properties  = x[2];
+  
+  var __construct = function(){
+    var xmlArray;
+    var matches;
+    if (typeof xmlData === "string") {
+      node.outerXML = "\n" + xmlData.trim();
+      xmlArray = /(<\?[\s\S]*\?>\s*)?<(\w+)( [^>]*)?(?:\/>|>([\s\S]*)<\/\2>)/.exec(node.outerXML);
+    } else if (xmlData) {
+      node.outerXML = "\n" + xmlData[0];
+      xmlArray = xmlData;
     }
     
-    var matches = self.innerXML.match(/<(\w+)[^>]*>[\s\S]*?<\/\1>|<\w+\/>/g);
-    if(matches){
-      for (var i = 0; i < matches.length; i++) {
-        var child = xmlNode(matches[i], self.identifiers,self.depth + 1);
-        self.children[child.UID] = child;
+    if (xmlArray && xmlArray.length == 5) {
+      node.declaration = xmlArray[1] || "";
+      node.tagName     = xmlArray[2] || "";
+      node.properties  = xmlArray[3] || "";
+      node.innerXML    = xmlArray[4] || "";
+      if(identifiers && Object.keys(identifiers).indexOf(node.tagName) > -1){
+        node.identifiers = identifiers[node.tagName];
       }
-      self.childKeys = Object.keys(self.children).sort();
     }
     
-    if(Object.keys(self.identifiers).indexOf("ID") > -1){
-      self.UID = self.tagName;
-      for (var i in self.identifiers.ID) {
-        for (var j in self.childKeys){
-          if (self.childKeys[j].indexOf(self.identifiers.ID[i]) > -1){
-        self.UID += "." + self.childKeys[j];
+    while (matches = xmlGlobalRegex.exec(node.innerXML)) {
+        var child = xmlNode(matches, node.identifiers, node.depth + 1);
+        node.children[child.UID] = child;
+    }
+    
+    node.childKeys = Object.keys(node.children).sort();
+    
+    if(Object.keys(node.identifiers).indexOf("ID") > -1){
+      node.UID = node.tagName;
+      for (var i in node.identifiers.ID) {
+        for (var j in node.childKeys){
+          if (node.childKeys[j].indexOf(node.identifiers.ID[i]) > -1){
+            node.UID += "." + node.childKeys[j];
           }
         }
       }
-    } else if (self.length() == 0){
-      self.UID = self.tagName + "." + self.innerXML;
+    } else /*0if (self.length() == 0)*/{
+      node.UID = node.tagName + "." + node.innerXML;
     }
-  }(this);
-  
     
-
+    node.content = function(){
+      if((l = node.length())>0){
+        var output = "\n" + node.declaration + "<" + node.tagName + node.properties + ">";
+        for (i=0; i<l; i++) {
+          output += node.children[node.childKeys[i]].content;
+        }
+        output += "\n</" + node.tagName + ">";
+        return output;
+      } else {
+        return node.outerXML;
+      }
+    }();
   
+  }();
 
   this.diff = function (newNode) {
     /*
      * node.diff represents the difference between the current node and another node
      */
-    console.log(node);
     
     if(!(this instanceof node.diff)) return new node.diff(newNode);
     
@@ -186,22 +198,22 @@ xmlNode = function (xmlString, identifiers, depth, parentID) {
       }
         
       if (self.status == status.unchanged) {
-        return self.old.outerXML.replace(/\n/g,"\n ");
+        return self.old.content.replace(/\n/g,"\n ");
       } else if (self.status == status.added) {
-        return self.new.outerXML.replace(/\n/g,"\n+");
+        return self.new.content.replace(/\n/g,"\n+");
       } else if (self.status == status.deleted) {
-        return self.old.outerXML.replace(/\n/g,"\n-");
+        return self.old.content.replace(/\n/g,"\n-");
       } else if (self.status == status.modified) {
-        return self.old.outerXML.replace(/\n/g,"\n-") 
-          + self.new.outerXML.replace(/\n/g,"\n+");
+        return self.old.content.replace(/\n/g,"\n-") 
+          + self.new.content.replace(/\n/g,"\n+");
       } else if (self.status == status.childrenModified) {
         var allKeys = Object.keys(self.children).sort(sortFunction);
         var output = self.old.declaration ? "\n " + self.old.declaration : "" ;
-        output += "\n " + repeat("    ",self.old.depth) + "<" + self.tagName;
-        if (self.old.properties) output += self.old.properties;
-        output += ">";
-        for (var i in allKeys) { output += self.children[allKeys[i]].toString(); }
-        output += "\n "  + repeat("    ",self.old.depth) + "</" + self.tagName + ">";
+        output += "\n<" + self.tagName + self.old.properties + ">";
+        for (var i in allKeys) {
+          output += self.children[allKeys[i]].toString();
+        }
+        output += "\n</" + self.tagName + ">";
         
         return output;
         
