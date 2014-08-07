@@ -8,6 +8,6 @@ $(function(){
       newData
     );
   
-    $("#output").text(thediff.toString());
+    $("#output").text(thediff.toUnifiedDiff());
   })
 });

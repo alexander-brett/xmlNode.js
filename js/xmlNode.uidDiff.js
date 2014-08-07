@@ -121,7 +121,7 @@ xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
   }
   
   
-  diff.toString = function(sortFunction){
+  diff.toUnifiedDiff = function(sortFunction){
     /*
      * Return a string which is a valid diff of the XML files, with + prepended
      * to added elements, and - prepended to removed elements.
@@ -162,7 +162,7 @@ xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
       var output = diff.old.declaration ? "\n " + diff.old.declaration : "" ;
       output += "\n <" + diff.tagName + diff.old.properties + ">";
       for (var i in allKeys) {
-        output += diff.children[allKeys[i]].toString();
+        output += diff.children[allKeys[i]].toUnifiedDiff();
       }
       output += "\n </" + diff.tagName + ">";
       
