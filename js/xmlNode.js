@@ -55,7 +55,7 @@ xmlNode = function (xmlData, depth) {
     }
     
     while (matches = xmlGlobalRegex.exec(node.innerXML)) {
-        node.children.push(xmlNode(matches, node.depth+1););
+        node.children.push(xmlNode(matches, node.depth+1));
     }
     
   }();

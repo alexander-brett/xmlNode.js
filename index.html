@@ -9,10 +9,13 @@
   </head>
   <body>
     <button type="button" id="diff">Diff</button>
-    <div id="input">
-      <div id="left" contenteditable=true></div>
-      <div id="right" contenteditable=true></div>
+    <div class="top">
+      <div id="old" class="left" contenteditable=true></div>
+      <div id="new" class="right" contenteditable=true></div>
     </div>
-    <pre id="output"></pre>
+    <div class="bottom">
+      <div id="schema" class="left"></div>
+      <pre id="output" class="right"></pre>
+    </div>
   </body>
 </html>

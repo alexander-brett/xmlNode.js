@@ -1,9 +1,12 @@
 $(function(){
   $("#diff").click(function(){
-    oldData = xmlNode($("#left").text());
-    newData = xmlNode($("#right").text());
+    oldData = xmlNode($("#old").text());
+    newData = xmlNode($("#new").text());
     
-    thediff = oldData.uidDiff(newData)
+    thediff = oldData.uidDiff(
+      JSON.parse($("#schema").text),
+      newData
+    );
   
     $("#output").text(thediff.toString());
   })

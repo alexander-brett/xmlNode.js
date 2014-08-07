@@ -44,7 +44,7 @@ xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
    * xmlNode.uidDiff represents the difference between the current node and another node.
    * The algorithm requires some way of assigning a unique identifier to each node.
    */
-  
+   
   if(this instanceof xmlNode) return new this.uidDiff(identifiers, newNode, (oldNode || this));
   
   var diff      = this;
