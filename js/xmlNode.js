@@ -23,7 +23,7 @@ xmlNode = function (xmlData, depth) {
   this.tagName     = "";
   this.innerXML    = "";
   this.properties  = "";
-  this.indent      = "";
+  this.indent      = "\n" + repeat("  ", this.depth);
   this.content     = "";
   
   //the following regex identifies xml components
@@ -41,7 +41,7 @@ xmlNode = function (xmlData, depth) {
     
     if (typeof xmlData === "string") {
       node.outerXML = "\n" + xmlData.trim();
-      xmlArray = /(<\?[\s\S]*\?>\s*)?<(\w+)( [^>]*)?(?:\/>|>([\s\S]*)<\/\2>)/.exec(node.outerXML);
+      xmlArray = /(<\?[\s\S]*\?>)?\s*<(\w+)( [^>]*)?(?:\/>|>([\s\S]*)<\/\2>)/.exec(node.outerXML);
     } else if (xmlData) {
       node.outerXML = "\n" + xmlData[0];
       xmlArray = xmlData;
@@ -60,17 +60,25 @@ xmlNode = function (xmlData, depth) {
     
   }();
 
-  node.formatted = function(){
-    if ((l = node.children.length) > 0) {
+  node.formatted = function () {
+    if (!node.tagName) return "";
       
-      var output = "\n" + node.declaration + "<" + node.tagName + node.properties + ">";
-      for (i=0; i<l; i++) output += node.children[i].formatted();
-      output += "\n</"+node.tagName+">";
-      return output;
-      
-    } else {
-      return node.outerXML;
+    var output = (node.declaration ? node.indent + node.declaration : "")
+      + node.indent + "<" + node.tagName + node.properties;
+    
+    if (node.innerXML) {
+      output += ">";
+      if ((l = node.children.length) > 0) {
+        for (i=0; i<l; i++) output += node.children[i].formatted();
+        output += node.indent;
+      } else {
+        output += node.innerXML;
+      }
+      output += "</" + node.tagName + ">";
+    }else {
+      output += "/>"
     }
+    return output;
   };
 
 };

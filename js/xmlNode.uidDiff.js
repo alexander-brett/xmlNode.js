@@ -23,7 +23,7 @@ xmlNode.prototype.uidGen = function (schema) {
       this.childUIDs.push(UID);
     } 
     
-    if(Object.keys(schema).indexOf("ID") > -1){
+    if(schema && Object.keys(schema).indexOf("ID") > -1){
       for (var i in schema.ID) {
         for (var j in this.childUIDs) {
           if (this.childUIDs[j].indexOf(schema.ID[i]) > -1) {
@@ -39,13 +39,13 @@ xmlNode.prototype.uidGen = function (schema) {
   return this;
 }
 
-xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
+xmlNode.prototype.uidDiff = function (schema, newNode, oldNode) {
   /*
    * xmlNode.uidDiff represents the difference between the current node and another node.
    * The algorithm requires some way of assigning a unique identifier to each node.
    */
    
-  if(this instanceof xmlNode) return new this.uidDiff(identifiers, newNode, (oldNode || this));
+  if(this instanceof xmlNode) return new this.uidDiff(schema, newNode, (oldNode || this));
   
   var diff      = this;
   diff.old      = oldNode;
@@ -74,6 +74,7 @@ xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
     } else if (
       diff.old.properties == diff.new.properties
       && diff.old.declaration == diff.new.declaration
+      && diff.old.tagname == diff.new.tagname
       && diff.old.children.length > 0
       && diff.new.children.length > 0
     ) {
@@ -85,10 +86,10 @@ xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
         
       for (var i in keys){
         var k = keys[i];
-        var oldChild = diff.old.childUIDs.indexOf(k) < 0 ? xmlNode() : diff.old.childrenByUID[k];
-        var newChild = diff.new.childUIDs.indexOf(k) < 0 ? xmlNode() : diff.new.childrenByUID[k];
+        var oldChild = diff.old.childrenByUID[k] || xmlNode();
+        var newChild = diff.new.childrenByUID[k] || xmlNode();
         
-        diff.children[k] = oldChild.uidDiff(newChild);
+        diff.children[k] = oldChild.uidDiff(schema, newChild);
       }
     } else {
       diff.status = status.modified;
@@ -147,24 +148,27 @@ xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
         }
       }
     }
+    
+    var added     = function (string) {return string.replace(/\n/g,"\n+")};
+    var removed   = function (string) {return string.replace(/\n/g,"\n-")};
+    var unchanged = function (string) {return string.replace(/\n/g,"\n ")};
       
     if (diff.status == status.unchanged) {
-      return diff.old.formatted().replace(/\n/g,"\n ");
+      return unchanged(diff.old.formatted());
     } else if (self.status == status.added) {
-      return diff.new.formatted().replace(/\n/g,"\n+");
+      return added(diff.new.formatted());
     } else if (diff.status == status.deleted) {
-      return diff.old.formatted().replace(/\n/g,"\n-");
+      return removed(diff.old.formatted());
     } else if (diff.status == status.modified) {
-      return diff.old.formatted().replace(/\n/g,"\n-") 
-        + diff.new.formatted().replace(/\n/g,"\n+");
+      return removed(diff.old.formatted()) + added(diff.new.formatted());
     } else if (diff.status == status.childrenModified) {
       var allKeys = Object.keys(diff.children).sort(sortFunction);
-      var output = diff.old.declaration ? "\n " + diff.old.declaration : "" ;
-      output += "\n <" + diff.tagName + diff.old.properties + ">";
+      var output = diff.old.declaration ? unchanged(diff.old.indent) + diff.old.declaration : "" ;
+      output += unchanged(diff.old.indent) + "<" + diff.tagName + diff.old.properties + ">";
       for (var i in allKeys) {
         output += diff.children[allKeys[i]].toUnifiedDiff();
       }
-      output += "\n </" + diff.tagName + ">";
+      output += unchanged(diff.old.indent) + "</" + diff.tagName + ">";
       
       return output;
       
