@@ -3,7 +3,7 @@ $(function(){
     oldData = xmlNode($("#left").text());
     newData = xmlNode($("#right").text());
     
-    thediff = oldData.diff(newData)
+    thediff = oldData.uidDiff(newData)
   
     $("#output").text(thediff.toString());
   })
