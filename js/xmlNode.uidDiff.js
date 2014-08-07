@@ -8,8 +8,7 @@ xmlNode.prototype.uidGen = function (schema) {
    * This function could be overridden provided those constraints held.
    */
 
-  if (!this.UID) {
-    
+  if (typeof this.UID == "undefined") {
     this.UID = this.tagName;
     this.childUIDs = [];
     this.childrenByUID = {};
@@ -18,8 +17,8 @@ xmlNode.prototype.uidGen = function (schema) {
       schema = schema[node.tagName];
     }
     
-    for (i=0; i<this.children.length; i++) {
-      var UID = this.children[i].uidGen(schema);
+    for (var i=0; i<this.children.length; i++) {
+      var UID = this.children[i].uidGen(schema).UID;
       this.childrenByUID[UID] = this.children[i];
       this.childUIDs.push(UID);
     } 
@@ -37,7 +36,7 @@ xmlNode.prototype.uidGen = function (schema) {
     }
   }
   
-  return this.UID;
+  return this;
 }
 
 xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
@@ -65,7 +64,6 @@ xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
     "childrenModified": 16
   };
   
-  
   var __construct = function(){
     if (diff.old && !diff.new) {
       diff.status = status.deleted;
@@ -80,13 +78,15 @@ xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
       && diff.new.children.length > 0
     ) {
       diff.status = status.childrenModified;
-      var keys = diff.old.childKeys.concat(diff.new.childKeys).filter(function(e, i, array) {
-        return array.indexOf(e) == i;
-      });
+      
+      var keys = diff.old.uidGen().childUIDs
+        .concat(diff.new.uidGen().childUIDs)
+        .filter(function (e, i, array) {return array.indexOf(e) == i});
+        
       for (var i in keys){
         var k = keys[i];
-        var oldChild = diff.old.childKeys.indexOf(k) < 0 ? xmlNode() : diff.old.children[k];
-        var newChild = diff.new.childKeys.indexOf(k) < 0 ? xmlNode() : diff.new.children[k];
+        var oldChild = diff.old.childUIDs.indexOf(k) < 0 ? xmlNode() : diff.old.childrenByUID[k];
+        var newChild = diff.new.childUIDs.indexOf(k) < 0 ? xmlNode() : diff.new.childrenByUID[k];
         
         diff.children[k] = oldChild.uidDiff(newChild);
       }
@@ -96,7 +96,7 @@ xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
   }();
   
   
-  this.filter = function(terms){
+  diff.filter = function(terms){
     /*
      * filter the diff by an array of terms, such that only modifications,
      * additions, and deletions where the ID matches one of the terms are
@@ -116,10 +116,12 @@ xmlNode.prototype.uidDiff = function (identifiers, newNode, oldNode) {
     } else if (diff.status == status.childrenModified && !matches) {
       for (var i in diff.children) { diff.children[i].filter(terms); }
     }
+    
+    return diff;
   }
   
   
-  this.toString = function(sortFunction){
+  diff.toString = function(sortFunction){
     /*
      * Return a string which is a valid diff of the XML files, with + prepended
      * to added elements, and - prepended to removed elements.
