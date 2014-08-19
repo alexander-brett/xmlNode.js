@@ -24,10 +24,9 @@ xmlNode = function (xmlData, depth) {
   this.innerXML    = "";
   this.properties  = "";
   this.indent      = "\n" + repeat("  ", this.depth);
-  this.content     = "";
   
   //the following regex identifies xml components
-  var xmlGlobalRegex = /(<\?[\s\S]*\?>\s*)?<(\w+)( [^>]*)?(?:\/>|>([\s\S]*)<\/\2>)/g;
+  var xmlGlobalRegex = /\s*(<\?[\s\S]*\?>)\s*?<(\w+)( [^>]*)?(?:\/>|>(?:(<!\[CDATA\[\[\s\S]*]\]>)|([\s\S]*))<\/\2>)/g;
   
   var __construct = function(){
     /*
@@ -65,6 +64,8 @@ xmlNode = function (xmlData, depth) {
       
     var output = (node.declaration ? node.indent + node.declaration : "")
       + node.indent + "<" + node.tagName + node.properties;
+    
+    if (node.depth == 0) output = output.replace("\n", '');
     
     if (node.innerXML) {
       output += ">";
