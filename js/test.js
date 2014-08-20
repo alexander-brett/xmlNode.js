@@ -20,9 +20,10 @@ var testXMLParse = function (input, declaration, tagname, properties, innerXML, 
 
 var testUIDdiff = function (left, right, output, schema) {
   var time = Date.now();
-  var result = xmlNode(left).uidDiff(schema, xmlNode(right)).toUnifiedDiff();
+  var diff = xmlNode(left).uidDiff(schema, xmlNode(right));
+  var result = diff.toUnifiedDiff();
   time = Date.now() - time;
-  
+  console.log(diff);
   return {
     "failures": (result == output ? false : ["FAIL"]),
     "time": time
@@ -31,58 +32,93 @@ var testUIDdiff = function (left, right, output, schema) {
 
 var testResults = {
   'XML Parsing': {
+    
     'Empty node':   
       testXMLParse('','','','','', '', 0, ''),
+      
     'Self closing tag':
       testXMLParse('<a/>','','a','','', '', 0, '<a/>'),
+      
     'Self closing with properties':
       testXMLParse('<a b="c"/>', '', 'a', ' b="c"', '', '', 0, '<a b="c"/>'),
+      
     'Empty tag collapses':
       testXMLParse('<a></a>', '', 'a', '', '', '', 0, '<a/>'),
+      
     'Same tag nested':
       testXMLParse('<a><a></a></a>', '', 'a', '', '<a></a>', '', 1, '<a>\n  <a/>\n</a>'),
+      
     'Same tag repeated':
       testXMLParse('<a><b></b><b></b></a>', '', 'a', '', '<b></b><b></b>', '', 2, '<a>\n  <b/>\n  <b/>\n</a>'),
+      
     'Multiple tags with children':
       testXMLParse('<a><b><c/><d/></b><b><c/></b></a>', '', 'a', '', '<b><c/><d/></b><b><c/></b>', '', 2, '<a>\n  <b>\n    <c/>\n    <d/>\n  </b>\n  <b>\n    <c/>\n  </b>\n</a>'),
+      
     'Same tag repeated with children':
       testXMLParse('<a><b><c>1</c></b><b><c>2</c></b></a>', '', 'a', '', '<b><c>1</c></b><b><c>2</c></b>', '', 2, '<a>\n  <b>\n    <c>1</c>\n  </b>\n  <b>\n    <c>2</c>\n  </b>\n</a>'),
+      
     'Declaration':
       testXMLParse('<?xml?><a/>', '<?xml?>', 'a', '', '', '', 0, '<?xml?>\n<a/>'),
+      
     'Single child':
       testXMLParse('<a><b/></a>', '', 'a', '', '<b/>', '', 1, '<a>\n  <b/>\n</a>'),
+      
     'Content':
       testXMLParse('<a>aoeuidhtns</a>', '', 'a', '', '', 'aoeuidhtns', 0, '<a>aoeuidhtns</a>'),
+      
     'Content is newline':
       testXMLParse('<a>\n</a>', '', 'a', '', '', '\n', 0, '<a>\n</a>'),
+      
     'cData':
       testXMLParse('<a><![CDATA[<m></m><b></b></a>]]></a>', '', 'a', '', '', '<![CDATA[<m></m><b></b></a>]]>', 0, '<a><![CDATA[<m></m><b></b></a>]]></a>')
   },
-  'UID Diff without schema: basic examples': {
+  'UID Diff without schema': {
+    
     'Empty diff':
       testUIDdiff('', '', ''),
+      
     'Unchanged simple node':
       testUIDdiff('<a/>', '<a/>', ' <a/>'),
+      
     'Replace simple node':
       testUIDdiff('<a/>','<b/>','-<a/>\n+<b/>'),
+      
     'Unchanged with declaration':
       testUIDdiff('<?xml?><a/>', '<?xml?><a/>', ' <?xml?>\n <a/>'),
+      
     'Empty -> Simple node':
       testUIDdiff('', '<a/>', '+<a/>'),
+      
     'Empty -> Nested node':
       testUIDdiff('', '<a><b/></a>', '+<a>\n+  <b/>\n+</a>'),
+      
     'Nested node -> Empty':
       testUIDdiff('<a><b/></a>', '', '-<a>\n-  <b/>\n-</a>'),
+      
     'Simple node -> Empty':
       testUIDdiff('<a/>', '', '-<a/>'),
+      
     'Add content':
       testUIDdiff('<a/>', '<a>aoeu</a>', '-<a/>\n+<a>aoeu</a>'),
+      
     'Replace content with cData':
-      testUIDdiff('<a>aoeu</a>','<a><![CDATA[<m></m><b></b></a>]]></a>','-<a>aoeu</a>\n+<a><![CDATA[<m></m><b></b></a>]]></a>')
+      testUIDdiff('<a>aoeu</a>','<a><![CDATA[<m></m><b></b></a>]]></a>','-<a>aoeu</a>\n+<a><![CDATA[<m></m><b></b></a>]]></a>'),
+      
+    'Diff with several children':
+      testUIDdiff('<a><b><c>1</c><d>3</d></b><b><c>2</c><d>3</d></b></a>',
+        '<a><b><c>1</c><d>2</d></b><b><c>2</c><d>3</d></b></a>',
+        ' <a>\n+  <b>\n+    <c>1</c>\n+    <d>2</d>\n+  </b>\n-  <b>\n-    <c>1</c>\n-    <d>3</d>\n-  </b>\n   <b>\n     <c>2</c>\n     <d>3</d>\n   </b>\n </a>'
+      )
   },
   'UID diff with schema':{
-    '':
-      testUIDdiff('<a><b><c>1</c><d>2</d></b><b><c>2</c><d>3</d></b></a>')
+    
+    'UID diff identifying two children by ID':
+      testUIDdiff(
+        '<a><b><c>1</c><d>3</d></b><b><c>2</c><d>3</d></b></a>',
+        '<a><b><c>1</c><d>2</d></b><b><c>2</c><d>3</d></b></a>',
+        ' <a>\n   <b>\n     <c>1</c>\n+    <d>2</d>\n-    <d>3</d>\n   </b>\n   <b>\n     <c>2</c>\n     <d>3</d>\n   </b>\n </a>',
+        {"a": {"b": {"ID": ["c"]}}}
+      )
   },
   "Known Limitations": {
     //any tests which are unlikely to be fixed live here

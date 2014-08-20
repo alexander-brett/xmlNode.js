@@ -2,12 +2,16 @@ $(function(){
   $("#diff").click(function(){
     oldData = xmlNode($("#old").val());
     newData = xmlNode($("#new").val());
-    schema = (x=$("#schema").text() ? JSON.parse(x) : false);
+    var x = $("#schema").val();
+    var schema = false;
+    if (x) schema = JSON.parse(x);
     
-    thediff = oldData.uidDiff(
+    var thediff = oldData.uidDiff(
       schema,
       newData
     );
+    
+    console.log(thediff)
   
     $("#output").text(thediff.toUnifiedDiff());
   });

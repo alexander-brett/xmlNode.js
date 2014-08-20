@@ -8,32 +8,30 @@ xmlNode.prototype.uidGen = function (schema) {
    * This function could be overridden provided those constraints held.
    */
 
-  if (typeof this.UID == "undefined") {
-    this.UID = this.tagName;
-    this.childUIDs = [];
-    this.childrenByUID = {};
-    
-    if (schema && Object.keys(schema).indexOf(this.tagName) > -1) {
-      schema = schema[node.tagName];
-    }
-    
-    for (var i=0; i<this.children.length; i++) {
-      var UID = this.children[i].uidGen(schema).UID;
-      this.childrenByUID[UID] = this.children[i];
-      this.childUIDs.push(UID);
-    } 
-    
-    if(schema && Object.keys(schema).indexOf("ID") > -1){
-      for (var i in schema.ID) {
-        for (var j in this.childUIDs) {
-          if (this.childUIDs[j].indexOf(schema.ID[i]) > -1) {
-            this.UID += "." + this.childUIDs[j];
-          }
-        }
-      }
+  if (typeof this.UID != "undefined") return this;
+  
+  this.UID = this.tagName;
+  this.childUIDs = [];
+  this.childrenByUID = {};
+  
+  if (schema) schema = (Object.keys(schema).indexOf(this.tagName) == -1) ? schema = {} :schema[this.tagName];
+  
+  for (var i=0; i<this.children.length; i++) {
+    var UID = this.children[i].uidGen(schema).UID;
+    this.childrenByUID[UID] = this.children[i];
+    this.childUIDs.push(UID);
+  }
+  
+  if (schema) {
+    if (Object.keys(schema).indexOf("ID") > -1) {
+      for (var i in schema.ID)
+        for (var j in this.children)
+          if (this.children[j].tagName == schema.ID[i]) this.UID += "." + this.children[j].UID;
     } else {
-      this.UID += "." + this.innerXML;
+      this.UID += "." + this.content;
     }
+  } else {
+    this.UID += "." + this.innerXML;
   }
   
   return this;
@@ -80,8 +78,8 @@ xmlNode.prototype.uidDiff = function (schema, newNode, oldNode) {
     ) {
       diff.status = status.childrenModified;
       
-      var keys = diff.old.uidGen().childUIDs
-        .concat(diff.new.uidGen().childUIDs)
+      var keys = diff.old.uidGen(schema).childUIDs
+        .concat(diff.new.uidGen(schema).childUIDs)
         .filter(function (e, i, array) {return array.indexOf(e) == i});
         
       for (var i in keys){
