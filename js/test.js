@@ -82,7 +82,7 @@ var testResults = {
   },
   'UID diff with schema':{
     '':
-      testUIDdiff('<a><b><c>1</c><d>2</d></b><b><c>2</c><d>3</d></b></a>', )
+      testUIDdiff('<a><b><c>1</c><d>2</d></b><b><c>2</c><d>3</d></b></a>')
   },
   "Known Limitations": {
     //any tests which are unlikely to be fixed live here
