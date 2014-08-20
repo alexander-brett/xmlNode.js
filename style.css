@@ -1,7 +1,6 @@
 * {
   margin: 0;
   padding: 0;
-  font-family: sans-serif;
 }
 .top,.bottom {
   height: 45%;
@@ -12,10 +11,11 @@
   height:100%;
   border:1px solid black;
 }
-div {
+.results {
+  font-family: sans-serif;
   clear: both;
 }
-.testresults {
+.testResult {
   background: lightgreen;
   border-radius: 10px;
   border: 5px solid lightgreen;
@@ -24,14 +24,14 @@ div {
   float: left;
   width: 40%;
 }
-.testresults h3 {
+.testResult h3 {
   display: inline-block;
 }
-.testresults .time {
+.testResult .time {
   display: inline-block;
   width : 6em;
 }
-.testresults.failure {
+.testResult.failure {
   background: red;
   border-color: red;
 }

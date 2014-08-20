@@ -93,7 +93,7 @@ $(function(){
   var categories = Object.keys(testResults);
   for (i=0; i<categories.length; i++) {
     var categoryName = categories[i];
-    var resultDiv = $("<div/>");
+    var resultDiv = $("<div/>").addClass("results");
     resultDiv.append($("<h2/>").text(categoryName));
     $("body").append(resultDiv);
     var tests = Object.keys(testResults[categoryName]);
@@ -102,7 +102,7 @@ $(function(){
       var testName = tests[j];
       var failures = testResults[categoryName][testName].failures;
       var time     = testResults[categoryName][testName].time;
-      var testDiv = $("<span/>").addClass("testResults");
+      var testDiv = $("<span/>").addClass("testResult");
       testDiv.append($("<span/>").addClass("time").text(time)).append($("<h3/>").text(testName));
       resultDiv.append(testDiv);
       
