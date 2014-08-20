@@ -149,29 +149,36 @@ xmlNode.prototype.uidDiff = function (schema, newNode, oldNode) {
       }
     }
     
-    var added     = function (string) {return string.replace(/\n/g,"\n+")};
-    var removed   = function (string) {return string.replace(/\n/g,"\n-")};
-    var unchanged = function (string) {return string.replace(/\n/g,"\n ")};
+    var added     = function (string) {
+      return (string.length == 0 || string.indexOf("\n") == 0 ? "" : "\n+") + string.replace(/\n/g,"\n+")
+    };
+    var removed   = function (string) {
+      return (string.length == 0 || string.indexOf("\n") == 0 ? "" : "\n-") + string.replace(/\n/g,"\n-")
+    };
+    var unchanged = function (string) {
+      return (string.length == 0 || string.indexOf("\n") == 0 ? "" : "\n ") + string.replace(/\n/g,"\n ")
+    };
+    var output = '';
       
     if (diff.status == status.unchanged) {
-      return unchanged(diff.old.formatted());
+      output = unchanged(diff.old.formatted());
     } else if (self.status == status.added) {
-      return added(diff.new.formatted());
+      output = added(diff.new.formatted());
     } else if (diff.status == status.deleted) {
-      return removed(diff.old.formatted());
+      output = removed(diff.old.formatted());
     } else if (diff.status == status.modified) {
-      return removed(diff.old.formatted()) + added(diff.new.formatted());
+      output = removed(diff.old.formatted()) + added(diff.new.formatted());
     } else if (diff.status == status.childrenModified) {
       var allKeys = Object.keys(diff.children).sort(sortFunction);
-      var output = diff.old.declaration ? unchanged(diff.old.indent) + diff.old.declaration : "" ;
+      output = diff.old.declaration ? unchanged(diff.old.indent) + diff.old.declaration : "" ;
       output += unchanged(diff.old.indent) + "<" + diff.tagName + diff.old.properties + ">";
       for (var i in allKeys) {
-        output += diff.children[allKeys[i]].toUnifiedDiff();
+        output += "\n" + diff.children[allKeys[i]].toUnifiedDiff();
       }
       output += unchanged(diff.old.indent) + "</" + diff.tagName + ">";
+    }
       
-      return output;
-      
-    } else { return ""; }
+    if (output.indexOf("\n") == 0) output = output.slice(1);
+    return output;
   }
 };

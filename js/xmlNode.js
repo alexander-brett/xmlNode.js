@@ -37,8 +37,8 @@ xmlNode = function (xmlData, depth) {
    * 6: for internal use
    */
   
-  var xmlGlobalRegex = /\s*(<\?[\s\S]*\?>)?\s*?<(\w+)( [^>]*)?(?:\/>|>(?:(\s*<!\[CDATA\[[\s\S]*\]\]>\s*|[^<>]*)|((?:\s*<(\w+)>[\s\S]*<\/\6>|<\w+\/>\s*)*))<\/\2>)/g;
-  var xmlLocalRegex  = /^\s*(<\?[\s\S]*\?>)?\s*?<(\w+)( [^>]*)?(?:\/>|>(?:(\s*<!\[CDATA\[[\s\S]*\]\]>\s*|[^<>]*)|((?:\s*<(\w+)>[\s\S]*<\/\6>|<\w+\/>\s*)*))<\/\2>\s*)$/;
+  var xmlGlobalRegex = /\s*(<\?[\s\S]*\?>)?\s*?<(\w+)( [^>]*)?(?:\/>|>(?:(\s*<!\[CDATA\[[\s\S]*\]\]>\s*|[^<>]*)|((?:\s*<(\w+)>[\s\S]*?<\/\6>|<\w+\/>\s*)*?))<\/\2>)/g;
+  var xmlLocalRegex  = /^\s*(<\?[\s\S]*\?>)?\s*?<(\w+)( [^>]*)?(?:\/>|>(?:(\s*<!\[CDATA\[[\s\S]*\]\]>\s*|[^<>]*)|((?:\s*<(\w+)>[\s\S]*?<\/\6>|<\w+\/>\s*)*?))<\/\2>\s*)$/;
   
   var __construct = function(){
     /*
@@ -66,9 +66,7 @@ xmlNode = function (xmlData, depth) {
       node.innerXML    = xmlArray[5] || "";
     }
     
-    while (matches = xmlGlobalRegex.exec(node.innerXML)) {
-        node.children.push(xmlNode(matches, node.depth+1));
-    }
+    while (matches = xmlGlobalRegex.exec(node.innerXML)) node.children.push(xmlNode(matches, node.depth+1));
     
   }();
 
@@ -77,24 +75,22 @@ xmlNode = function (xmlData, depth) {
       
     var output = (node.declaration ? node.indent + node.declaration : "")
       + node.indent + "<" + node.tagName + node.properties;
+    var i;
     
     if (node.depth == 0) output = output.replace("\n", '');
     
-    if (node.innerXML) {
+    if (node.children.length > 0) {
       output += ">";
-      if ((l = node.children.length) > 0) {
-        for (i=0; i<l; i++) output += node.children[i].formatted();
-        output += node.indent;
-      } else {
-        throw "innerXML but no children"
+      for (i=0; i < node.children.length; i++) {
+        output += node.children[i].formatted();
       }
-      output += "</" + node.tagName + ">";
+      output += node.indent + "</" + node.tagName + ">";
     } else if (node.content) {
       output += ">" + node.content + "</" + node.tagName + ">";
     } else {
       output += "/>"
     }
     return output;
-  };
+  }
 
 };
