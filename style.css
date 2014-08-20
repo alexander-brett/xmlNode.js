@@ -1,6 +1,7 @@
 * {
   margin: 0;
   padding: 0;
+  font-family: sans-serif;
 }
 .top,.bottom {
   height: 45%;
@@ -10,4 +11,22 @@
   float: left;
   height:100%;
   border:1px solid black;
+}
+.testresults {
+  background: lightgreen;
+  border-radius: 10px;
+  border: 5px solid lightgreen;
+  margin: 5px;
+  display: inline-block;
+}
+.testresults h3 {
+  display: inline-block;
+}
+.testresults .time {
+  display: inline-block;
+  width : 6em;
+}
+.testresults.failure {
+  background: red;
+  border-color: red;
 }

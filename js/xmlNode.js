@@ -21,12 +21,24 @@ xmlNode = function (xmlData, depth) {
   this.depth       = depth || 0;
   this.declaration = "";
   this.tagName     = "";
+  this.content     = "";
   this.innerXML    = "";
   this.properties  = "";
   this.indent      = "\n" + repeat("  ", this.depth);
   
-  //the following regex identifies xml components
-  var xmlGlobalRegex = /\s*(<\?[\s\S]*\?>)\s*?<(\w+)( [^>]*)?(?:\/>|>(?:(<!\[CDATA\[\[\s\S]*]\]>)|([\s\S]*))<\/\2>)/g;
+  /*
+   * The following regex identifies xml components.
+   * 0: entire match
+   * 1: declaration
+   * 2: tagname
+   * 3: properties
+   * 4: CDATA or content (if it doesn't include <>)
+   * 5: innerXML
+   * 6: for internal use
+   */
+  
+  var xmlGlobalRegex = /\s*(<\?[\s\S]*\?>)?\s*?<(\w+)( [^>]*)?(?:\/>|>(?:(\s*<!\[CDATA\[[\s\S]*\]\]>\s*|[^<>]*)|((?:\s*<(\w+)>[\s\S]*<\/\6>|<\w+\/>\s*)*))<\/\2>)/g;
+  var xmlLocalRegex  = /^\s*(<\?[\s\S]*\?>)?\s*?<(\w+)( [^>]*)?(?:\/>|>(?:(\s*<!\[CDATA\[[\s\S]*\]\]>\s*|[^<>]*)|((?:\s*<(\w+)>[\s\S]*<\/\6>|<\w+\/>\s*)*))<\/\2>\s*)$/;
   
   var __construct = function(){
     /*
@@ -40,17 +52,18 @@ xmlNode = function (xmlData, depth) {
     
     if (typeof xmlData === "string") {
       node.outerXML = "\n" + xmlData.trim();
-      xmlArray = /(<\?[\s\S]*\?>)?\s*<(\w+)( [^>]*)?(?:\/>|>([\s\S]*)<\/\2>)/.exec(node.outerXML);
+      xmlArray = xmlLocalRegex.exec(node.outerXML);
     } else if (xmlData) {
       node.outerXML = "\n" + xmlData[0];
       xmlArray = xmlData;
     }
     
-    if (xmlArray && xmlArray.length == 5) {
+    if (xmlArray && xmlArray.length == 7) {
       node.declaration = xmlArray[1] || "";
       node.tagName     = xmlArray[2] || "";
       node.properties  = xmlArray[3] || "";
-      node.innerXML    = xmlArray[4] || "";
+      node.content     = xmlArray[4] || "";
+      node.innerXML    = xmlArray[5] || "";
     }
     
     while (matches = xmlGlobalRegex.exec(node.innerXML)) {
@@ -73,10 +86,12 @@ xmlNode = function (xmlData, depth) {
         for (i=0; i<l; i++) output += node.children[i].formatted();
         output += node.indent;
       } else {
-        output += node.innerXML;
+        throw "innerXML but no children"
       }
       output += "</" + node.tagName + ">";
-    }else {
+    } else if (node.content) {
+      output += ">" + node.content + "</" + node.tagName + ">";
+    } else {
       output += "/>"
     }
     return output;
